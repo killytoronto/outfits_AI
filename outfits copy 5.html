@@ -1,0 +1,3091 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sartorial Telemetry</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Умный гардероб с AI: подбор образов, планирование стирки, шопинг-ассистент">
+    <meta name="theme-color" content="#0ea5e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Гардероб AI">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230ea5e9'/%3E%3Ctext x='96' y='135' font-size='120' text-anchor='middle' fill='white'%3E👔%3C/text%3E%3C/svg%3E">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-gradient-1: #e0f2fe;
+            --bg-gradient-2: #bae6fd;
+            --bg-gradient-3: #7dd3fc;
+            --bg-gradient-4: #38bdf8;
+            --card-bg: rgba(255, 255, 255, 0.75);
+            --text-primary: #0c4a6e;
+            --text-secondary: #0369a1;
+            --border-color: rgba(186, 230, 253, 0.5);
+            --tab-inactive-bg: rgba(224, 242, 254, 0.5);
+            --tab-inactive-text: #0369a1;
+            --input-bg: rgba(255, 255, 255, 0.85);
+            --modal-bg: rgba(255, 255, 255, 0.95);
+            --primary: #0ea5e9;
+            --primary-light: #38bdf8;
+            --accent: #06b6d4;
+            --ocean-deep: #0284c7;
+            --ocean-light: #7dd3fc;
+        }
+
+        body.dark-theme {
+            --bg-gradient-1: #082f49;
+            --bg-gradient-2: #0c4a6e;
+            --bg-gradient-3: #075985;
+            --bg-gradient-4: #0369a1;
+            --card-bg: rgba(8, 47, 73, 0.75);
+            --text-primary: #e0f2fe;
+            --text-secondary: #7dd3fc;
+            --border-color: rgba(7, 89, 133, 0.5);
+            --tab-inactive-bg: rgba(12, 74, 110, 0.5);
+            --tab-inactive-text: #7dd3fc;
+            --input-bg: rgba(8, 47, 73, 0.85);
+            --modal-bg: rgba(8, 47, 73, 0.95);
+            --primary: #0ea5e9;
+            --primary-light: #38bdf8;
+            --accent: #06b6d4;
+            --ocean-deep: #0284c7;
+            --ocean-light: #7dd3fc;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes wave {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(-45deg, var(--bg-gradient-1), var(--bg-gradient-2), var(--bg-gradient-3), var(--bg-gradient-4));
+            background-size: 400% 400%;
+            animation: wave 15s ease infinite;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, rgba(56, 189, 248, 0.15) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"><path d="M0,48L48,56C96,64,192,80,288,80C384,80,480,64,576,69.3C672,75,768,101,864,101.3C960,101,1056,75,1152,64C1248,53,1344,59,1392,61.3L1440,64L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z" fill="rgba(14, 165, 233, 0.1)"/></svg>') repeat-x;
+            animation: wave-move 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes wave-move {
+            0% { background-position: 0 0; }
+            100% { background-position: 1200px 0; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            padding: 60px 32px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+                        0 2px 8px rgba(0, 0, 0, 0.04);
+            padding: 48px;
+            margin-bottom: 40px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12),
+                        0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Typography Scale */
+        h1 {
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        h2 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 24px;
+        }
+
+        h3 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            line-height: 1.3;
+            margin-bottom: 20px;
+        }
+
+        h4 {
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+
+        .icon-btn {
+            padding: 12px;
+            background: var(--input-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 20px;
+        }
+
+        .icon-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+            margin: 48px 0;
+        }
+
+        .info-card {
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .info-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .weather-card {
+            background: linear-gradient(135deg, rgba(147, 197, 253, 0.3) 0%, rgba(191, 219, 254, 0.2) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(147, 197, 253, 0.3);
+        }
+        .location-card {
+            background: linear-gradient(135deg, rgba(167, 243, 208, 0.3) 0%, rgba(209, 250, 229, 0.2) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(167, 243, 208, 0.3);
+        }
+        .vibe-card {
+            background: linear-gradient(135deg, rgba(216, 180, 254, 0.3) 0%, rgba(233, 213, 255, 0.2) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(216, 180, 254, 0.3);
+        }
+
+        .info-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: var(--tab-inactive-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 32px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px 32px;
+            border: none;
+            background: transparent;
+            color: var(--tab-inactive-text);
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: -0.2px;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+        }
+
+        .tab:hover:not(.active) {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .tab:active {
+            transform: scale(0.98);
+        }
+
+        .tab-content {
+            padding: 56px 0;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .wardrobe-item, .outfit-card {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .card {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 18px 40px;
+            border: none;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 17px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(244, 63, 94, 0.35);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: -0.01em;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 28px rgba(244, 63, 94, 0.45);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #8b5cf6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #7c3aed;
+        }
+
+        .input {
+            padding: 16px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 15px;
+            width: 100%;
+            background: var(--input-bg);
+            backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .input:hover {
+            border-color: rgba(244, 63, 94, 0.4);
+        }
+
+        .select {
+            padding: 16px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 15px;
+            width: 100%;
+            background: var(--input-bg);
+            backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1);
+        }
+
+        .select:hover {
+            border-color: rgba(244, 63, 94, 0.4);
+        }
+
+        .outfit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+            margin-top: 40px;
+        }
+
+        .outfit-card {
+            background: linear-gradient(135deg, rgba(250, 245, 255, 0.5) 0%, rgba(252, 231, 243, 0.5) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(216, 180, 254, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .outfit-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(139, 92, 246, 0.15);
+        }
+
+        .outfit-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(5px);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-weight: 500;
+            font-size: 15px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .wardrobe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .wardrobe-item {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .wardrobe-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: var(--primary);
+        }
+
+        .wardrobe-item img {
+            transition: transform 0.3s ease;
+        }
+
+        .wardrobe-item:hover img {
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--modal-bg);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none; }
+        .text-center { text-align: center; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-4 { margin-top: 16px; }
+        .flex { display: flex; }
+        .gap-2 { gap: 8px; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <div class="card">
+            <div style="text-align: center; padding: 32px 0 40px; position: relative;">
+                <button class="icon-btn" onclick="toggleTheme()" title="Переключить тему" id="theme-toggle" style="position: absolute; top: 24px; right: 24px; width: 48px; height: 48px; font-size: 20px;">🌙</button>
+                <h1 style="font-size: 56px; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.03em; color: var(--text-primary);">Sartorial Telemetry</h1>
+                <p style="font-size: 22px; color: var(--text-secondary); font-weight: 400; max-width: 700px; margin: 0 auto;">AI-гардероб, который подбирает образы, отслеживает стирку и экономит деньги</p>
+            </div>
+
+            <!-- Инфо-карточки -->
+            <div class="grid-3">
+                <div class="info-card weather-card">
+                    <div class="info-card-header">
+                        <span>Погода</span>
+                    </div>
+                    <div id="weather-display">Укажите местоположение</div>
+                </div>
+
+                <div class="info-card location-card">
+                    <div class="info-card-header">
+                        <span>Местоположение</span>
+                        <button class="icon-btn" onclick="showLocationModal()" title="Изменить" style="font-size: 16px;">⚙</button>
+                    </div>
+                    <div id="location-display">
+                        <button class="btn-secondary" onclick="requestLocation()">Моё местоположение</button>
+                        <button class="btn-secondary mt-4" onclick="showLocationModal()">Указать вручную</button>
+                    </div>
+                </div>
+
+                <div class="info-card vibe-card">
+                    <div class="info-card-header">
+                        <span>Настроение</span>
+                    </div>
+                    <select id="vibe-select" class="select" onchange="saveVibe()">
+                        <option value="casual">Повседневное</option>
+                        <option value="smart-casual">Смарт-кэжуал</option>
+                        <option value="dressy">Нарядное</option>
+                        <option value="sporty">Спортивное</option>
+                        <option value="edgy">Дерзкое</option>
+                        <option value="romantic">Романтичное</option>
+                    </select>
+                    <input type="text" id="occasion-input" class="input mt-4" placeholder="Конкретное событие..." onchange="saveOccasion()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладки -->
+        <div class="card" style="padding: 32px; overflow: hidden;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <!-- Основное -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Основное</div>
+                    <button class="tab active" onclick="switchTab('suggest')" style="flex: none; border-radius: 12px; justify-content: flex-start; padding: 16px 20px;">Подобрать образ</button>
+                    <button class="tab" onclick="switchTab('wardrobe')" style="flex: none; border-radius: 12px; justify-content: flex-start; padding: 16px 20px;">Гардероб</button>
+                </div>
+
+                <!-- Планирование -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Планирование</div>
+                    <button class="tab" onclick="switchTab('laundry')" style="flex: none; border-radius: 12px; justify-content: flex-start; padding: 16px 20px;">Стирка</button>
+                    <button class="tab" onclick="switchTab('shop')" style="flex: none; border-radius: 12px; justify-content: flex-start; padding: 16px 20px;">Шопинг</button>
+                </div>
+            </div>
+
+            <!-- Вкладка: Подобрать образ -->
+            <div id="tab-suggest" class="tab-content">
+                <div class="text-center">
+                    <h2 style="color: var(--text-primary);">Готовы выглядеть отлично?</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; font-size: 17px; line-height: 1.6;">
+                        На основе погоды, местоположения и гардероба подберу 3 идеальных образа под ваше настроение
+                    </p>
+                    <button id="generate-btn" class="btn-primary" onclick="generateOutfits()" style="font-size: 18px; padding: 20px 48px;">
+                        Подобрать образы
+                    </button>
+                    <p id="generate-error" class="mt-4" style="color: #ea580c;"></p>
+                </div>
+            </div>
+
+            <!-- Вкладка: Результаты -->
+            <div id="tab-results" class="tab-content hidden">
+                <h2 class="text-center mb-4" style="color: var(--text-primary);">Ваши образы</h2>
+                <div id="outfits-container" class="outfit-grid"></div>
+                <div class="text-center mt-4">
+                    <button onclick="switchTab('suggest')" style="background: none; border: none; color: var(--ocean-deep); font-weight: 600; cursor: pointer; font-size: 16px;">← Попробовать снова</button>
+                </div>
+            </div>
+
+            <!-- Вкладка: Гардероб -->
+            <div id="tab-wardrobe" class="tab-content hidden">
+                <!-- Персонализация -->
+                <div style="background: linear-gradient(135deg, rgba(125, 211, 252, 0.3) 0%, rgba(56, 189, 248, 0.2) 100%); padding: 32px; border-radius: 16px; margin-bottom: 32px;">
+                    <h3 style="color: var(--text-primary);">Персонализация</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div>
+                            <label style="font-weight: 600; margin-bottom: 12px; display: block; color: var(--text-primary);">Возрастная категория</label>
+                            <select id="age-group" class="select" onchange="savePersonalization()">
+                                <option value="">Выберите...</option>
+                                <option value="18-24">18-24 года</option>
+                                <option value="24-40">24-40 лет</option>
+                                <option value="40+">40+ лет</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; margin-bottom: 12px; display: block; color: var(--text-primary);">Предпочитаемый стиль</label>
+                            <select id="preferred-style" class="select" onchange="savePersonalization()">
+                                <option value="">Выберите...</option>
+                                <option value="oversized">Мягкий oversized (худи, свитера)</option>
+                                <option value="business">Строгий business casual</option>
+                                <option value="sport">Спортивный стиль</option>
+                                <option value="mixed">Смешанный стиль</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, rgba(224, 242, 254, 0.4) 0%, rgba(186, 230, 253, 0.3) 100%); padding: 40px; border-radius: 20px; margin-bottom: 48px; border: 1px solid rgba(186, 230, 253, 0.5);">
+                    <h3 style="color: var(--text-primary); margin-bottom: 32px;">Добавить вещь</h3>
+
+                    <!-- Основная информация -->
+                    <div style="display: grid; gap: 24px; margin-bottom: 32px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Категория</label>
+                                <select id="new-type" class="select">
+                                    <option value="top">Верх</option>
+                                    <option value="bottom">Низ</option>
+                                    <option value="outerwear">Верхняя одежда</option>
+                                    <option value="shoes">Обувь</option>
+                                    <option value="accessory">Аксессуар</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Сезон</label>
+                                <select id="new-season" class="select">
+                                    <option value="all">Всесезонная</option>
+                                    <option value="spring">Весна</option>
+                                    <option value="summer">Лето</option>
+                                    <option value="autumn">Осень</option>
+                                    <option value="winter">Зима</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Название</label>
+                            <input type="text" id="new-name" class="input" placeholder="Например: Синяя футболка">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Цвет</label>
+                            <input type="text" id="new-color" class="input" placeholder="Например: Синий">
+                        </div>
+                    </div>
+
+                    <!-- Характеристики -->
+                    <div style="background: rgba(255, 255, 255, 0.5); padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+                        <div style="display: grid; gap: 24px;">
+                            <div>
+                                <label style="font-size: 14px; font-weight: 600; margin-bottom: 12px; display: block; color: var(--text-primary);">Теплота: <span id="warmth-value" style="color: var(--ocean-deep);">3</span>/5</label>
+                                <input type="range" id="new-warmth" min="1" max="5" value="3" style="width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--ocean-light) 0%, var(--ocean-deep) 100%); outline: none; -webkit-appearance: none;" oninput="document.getElementById('warmth-value').textContent = this.value">
+                            </div>
+
+                            <div>
+                                <label style="font-size: 14px; font-weight: 600; margin-bottom: 12px; display: block; color: var(--text-primary);">Формальность: <span id="formality-value" style="color: var(--ocean-deep);">3</span>/5</label>
+                                <input type="range" id="new-formality" min="1" max="5" value="3" style="width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--ocean-light) 0%, var(--ocean-deep) 100%); outline: none; -webkit-appearance: none;" oninput="document.getElementById('formality-value').textContent = this.value">
+                            </div>
+
+                            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 12px; background: rgba(186, 230, 253, 0.3); border-radius: 10px;">
+                                <input type="checkbox" id="new-waterproof" style="width: 24px; height: 24px; cursor: pointer;">
+                                <span style="font-weight: 500; color: var(--text-primary);">Водонепроницаемая</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Фото -->
+                    <div style="margin-bottom: 32px;">
+                        <label style="font-size: 13px; font-weight: 600; margin-bottom: 12px; display: block; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Фото (опционально)</label>
+
+                        <!-- Превью фото -->
+                        <div id="photo-preview" style="display: none; margin-bottom: 16px; text-align: center;">
+                            <img id="photo-preview-img" style="max-width: 240px; max-height: 240px; border-radius: 16px; border: 2px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <div style="margin-top: 16px;">
+                                <button class="btn-secondary" onclick="removePhoto()" style="background: #ef4444; padding: 12px 24px;">Удалить фото</button>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки загрузки -->
+                        <div id="photo-buttons" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <label class="btn-secondary" style="padding: 16px; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, var(--ocean-light) 0%, var(--ocean-deep) 100%); color: white; border: none;">
+                                <span>📷</span>
+                                <span>Камера</span>
+                                <input type="file" id="photo-camera" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)" style="display: none;">
+                            </label>
+                            <label class="btn-secondary" style="padding: 16px; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border: none;">
+                                <span>🖼️</span>
+                                <span>Галерея</span>
+                                <input type="file" id="photo-upload" accept="image/*" onchange="handlePhotoUpload(event)" style="display: none;">
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="addItem()" style="width: 100%; padding: 18px; font-size: 16px;">Добавить в гардероб</button>
+                </div>
+
+                <h3 style="color: var(--text-primary);">Ваш гардероб</h3>
+                <div id="wardrobe-container" class="wardrobe-grid"></div>
+
+                <!-- Комбо-предложения -->
+                <div style="margin-top: 56px; background: linear-gradient(135deg, rgba(186, 230, 253, 0.5) 0%, rgba(125, 211, 252, 0.4) 100%); padding: 32px; border-radius: 16px;">
+                    <h4 style="color: var(--text-primary); margin-bottom: 12px;">Комбинации вещей</h4>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 15px; line-height: 1.6;">
+                        Узнайте, какие вещи лучше всего сочетаются друг с другом
+                    </p>
+                    <button class="btn-primary" onclick="generateCombos()" style="width: 100%; font-size: 16px; padding: 16px;">
+                        Подобрать комбинации
+                    </button>
+                    <div id="combos-container" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+
+            <!-- Вкладка: Шопинг -->
+            <div id="tab-shop" class="tab-content hidden">
+                <div style="text-align: center; margin-bottom: 48px;">
+                    <h2 style="color: var(--text-primary);">Подбор товаров</h2>
+                    <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto; font-size: 17px; line-height: 1.6;">
+                        Персональные рекомендации на основе вашего гардероба и стиля
+                    </p>
+                </div>
+
+                <div style="max-width: 500px; margin: 0 auto 48px;">
+                    <label style="font-weight: 600; margin-bottom: 12px; display: block; color: var(--text-primary);">Категория</label>
+                    <select id="shop-category" class="select" style="margin-bottom: 24px;">
+                        <option value="all">Все категории</option>
+                        <option value="top">Верх</option>
+                        <option value="bottom">Низ</option>
+                        <option value="outerwear">Верхняя одежда</option>
+                        <option value="shoes">Обувь</option>
+                        <option value="accessory">Аксессуары</option>
+                    </select>
+
+                    <button class="btn-primary" onclick="generateShoppingRecommendations()" style="width: 100%; font-size: 17px; padding: 18px;">
+                        Подобрать товары
+                    </button>
+                </div>
+
+                <div id="shop-container"></div>
+            </div>
+
+            <!-- Вкладка: Планировщик стирки -->
+            <div id="tab-laundry" class="tab-content hidden">
+                <div style="background: linear-gradient(135deg, rgba(224, 242, 254, 0.7) 0%, rgba(219, 234, 254, 0.7) 100%); padding: 32px; border-radius: 16px; margin-bottom: 32px;">
+                    <h3 style="color: var(--text-primary);">Планирование стирки</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary);">Когда нужна одежда?</label>
+                            <input type="date" id="target-date" class="input">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary);">Тип одежды</label>
+                            <select id="laundry-type" class="select">
+                                <option value="everyday">Повседневная</option>
+                                <option value="workout">Спортивная</option>
+                                <option value="formal">Деловая</option>
+                                <option value="all">Вся</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="generateLaundryPlan()" style="width: 100%;">
+                        Создать план стирки
+                    </button>
+                </div>
+
+                <div id="laundry-plan-container"></div>
+
+                <!-- Календарь стирки -->
+                <div style="background: var(--card-bg); border-radius: 12px; padding: 24px; margin-top: 24px; transition: all 0.3s ease;">
+                    <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: var(--text-primary);">📅 Календарь стирки</h3>
+                    <div id="laundry-calendar"></div>
+                </div>
+
+                <!-- Трекинг капсул -->
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; padding: 24px; margin-top: 24px; transition: all 0.3s ease;">
+                    <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: var(--text-primary);">🧴 Стиральные капсулы</h3>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="flex: 1;">
+                            <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Осталось капсул</div>
+                            <div id="capsules-count" style="font-size: 48px; font-weight: 700; color: #8b5cf6;">20</div>
+                        </div>
+                        <div style="text-align: center; padding: 0 20px;">
+                            <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Хватит на</div>
+                            <div id="capsules-days" style="font-size: 24px; font-weight: 600; color: #059669;">~7 дней</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: center;">
+                        <button class="btn-primary" onclick="addCapsules()" style="background: #8b5cf6; padding: 14px; max-width: 250px;">
+                            ➕ Добавить капсулы
+                        </button>
+                    </div>
+
+                    <div id="capsules-alert" style="margin-top: 16px; padding: 16px; background: #fef2f2; color: #dc2626; border-radius: 8px; font-weight: 600; display: none; animation: slideIn 0.3s ease-out;">
+                        Капсулы заканчиваются! Осталось менее 5 штук.
+                    </div>
+                </div>
+
+                <!-- История стирок -->
+                <div style="background: var(--card-bg); border-radius: 12px; padding: 24px; margin-top: 24px; transition: all 0.3s ease;">
+                    <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: var(--text-primary);">📜 История стирок</h3>
+                    <div id="laundry-history-container"></div>
+                </div>
+            </div>
+
+            <!-- Вкладка: История -->
+            <div id="tab-history" class="tab-content hidden">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="font-size: 28px; font-weight: bold; margin-bottom: 12px; color: var(--text-primary);">История</h2>
+                    <p style="color: var(--text-secondary);">Образы и погода по дням</p>
+                </div>
+                <div id="history-container"></div>
+            </div>
+
+            <!-- Вкладка: Статистика -->
+            <div id="tab-stats" class="tab-content hidden">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <h2 style="font-size: 28px; font-weight: bold; margin-bottom: 12px; color: var(--text-primary);">Статистика</h2>
+                    <p style="color: var(--text-secondary);">Использование вещей</p>
+                </div>
+                <div id="stats-container"></div>
+            </div>
+
+            <!-- Вкладка: Сохранённые образы -->
+        </div>
+
+        <!-- Футер -->
+        <div class="text-center" style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 8px;">
+            <p style="margin-bottom: 8px; font-size: 14px; color: var(--text-secondary);">
+                <strong>Данные сохраняются в браузере</strong> - ваш гардероб не потеряется
+            </p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                Погода: Open-Meteo • Геолокация: Nominatim/OpenStreetMap • AI: llm7.io
+            </p>
+            <p style="font-size: 11px; color: var(--text-secondary); opacity: 0.7; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                Автор не несет ответственности за хранение и обработку персональных данных. Используя сервис, вы принимаете на себя ответственность за отправляемые запросы и данные.
+            </p>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Напоминания -->
+    <div id="reminders-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 style="font-size: 20px; font-weight: bold; color: var(--text-primary);">Напоминания</h3>
+                <button class="icon-btn" onclick="hideRemindersModal()">✖️</button>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary);">Тип напоминания</label>
+                <select id="reminder-type" class="select" style="margin-bottom: 12px;">
+                    <option value="laundry">Стирка</option>
+                    <option value="event">Событие</option>
+                    <option value="shopping">Шопинг</option>
+                    <option value="other">Другое</option>
+                </select>
+
+                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary);">Текст напоминания</label>
+                <input type="text" id="reminder-text" class="input" placeholder="Например: Постирать спортивную одежду" style="margin-bottom: 12px;">
+
+                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary);">Дата и время</label>
+                <input type="datetime-local" id="reminder-datetime" class="input" style="margin-bottom: 16px;">
+
+                <button class="btn-primary" onclick="addReminder()" style="width: 100%;">
+                    Добавить напоминание
+                </button>
+            </div>
+
+            <div id="reminders-list" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: Местоположение -->
+    <div id="location-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 style="font-size: 20px; font-weight: bold; color: var(--text-primary);">Указать местоположение</h3>
+                <button class="icon-btn" onclick="hideLocationModal()">✖</button>
+            </div>
+
+            <label style="display: block; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Введите название города</label>
+            <div style="display: flex; gap: 12px;">
+                <input type="text" id="city-search" class="input" placeholder="Например: Москва, Санкт-Петербург" onkeypress="if(event.key==='Enter') searchCity()" style="flex: 1;">
+                <button class="btn-primary" onclick="searchCity()" style="padding: 16px 24px;">Найти</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Состояние приложения
+        let state = {
+            wardrobe: [
+                {
+                    id: 1,
+                    type: 'bottom',
+                    name: 'Синие джинсы',
+                    color: 'Синий',
+                    warmth: 3,
+                    formality: 3,
+                    waterproof: false,
+                    season: 'all',
+                    photo: null
+                },
+                {
+                    id: 2,
+                    type: 'top',
+                    name: 'Белая футболка',
+                    color: 'Белый',
+                    warmth: 2,
+                    formality: 2,
+                    waterproof: false,
+                    season: 'all',
+                    photo: null
+                },
+                {
+                    id: 3,
+                    type: 'shoes',
+                    name: 'Белые кеды',
+                    color: 'Белый',
+                    warmth: 2,
+                    formality: 2,
+                    waterproof: false,
+                    season: 'all',
+                    photo: null
+                },
+                {
+                    id: 4,
+                    type: 'top',
+                    name: 'Серая кофта',
+                    color: 'Серый',
+                    warmth: 4,
+                    formality: 3,
+                    waterproof: false,
+                    season: 'all',
+                    photo: null
+                },
+                {
+                    id: 5,
+                    type: 'top',
+                    name: 'Белое худи',
+                    color: 'Белый',
+                    warmth: 4,
+                    formality: 2,
+                    waterproof: false,
+                    season: 'all',
+                    photo: null
+                }
+            ],
+            savedOutfits: [],
+            location: null,
+            locationName: '',
+            weather: null,
+            forecast: null,
+            vibe: 'casual',
+            occasion: '',
+            ageGroup: '',
+            preferredStyle: '',
+            darkTheme: false,
+            laundrySchedule: [],
+            outfitHistory: [],
+            reminders: [],
+            capsules: parseInt(20), // Количество стиральных капсул
+            laundryHistory: [], // История всех стирок
+            currentLaundryPlan: null // Текущий план стирки для принятия/отклонения
+        };
+
+        // Текущие образы для сохранения
+        let currentOutfits = [];
+
+        // Временное хранение фото новой вещи
+        let currentPhoto = null;
+
+        // Темная тема
+        function toggleTheme() {
+            state.darkTheme = !state.darkTheme;
+            document.body.classList.toggle('dark-theme');
+            document.getElementById('theme-toggle').textContent = state.darkTheme ? '☀️' : '🌙';
+            saveToStorage();
+        }
+
+        function loadTheme() {
+            if (state.darkTheme) {
+                document.body.classList.add('dark-theme');
+                document.getElementById('theme-toggle').textContent = '☀️';
+            }
+        }
+
+        // Инициализация
+        function init() {
+            loadFromStorage();
+            loadTheme();
+            renderWardrobe();
+            renderSavedOutfits();
+            updateCounts();
+            updateCapsulesDisplay();
+
+            if (state.location) {
+                fetchWeather(state.location);
+                updateLocationDisplay();
+            }
+
+            // Запускаем проверку напоминаний
+            scheduleReminderCheck();
+            updateRemindersBadge();
+        }
+
+        // localStorage
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem('wardrobeData');
+                let needsResave = false;
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    // Проверяем, есть ли старые английские данные - если да, сбрасываем на русские дефолты
+                    if (data.wardrobe && data.wardrobe.length > 0) {
+                        const hasEnglishData = data.wardrobe.some(item =>
+                            /[a-zA-Z]/.test(item.name) && (
+                                item.name.includes('White') ||
+                                item.name.includes('Navy') ||
+                                item.name.includes('Blue') ||
+                                item.name.includes('Black') ||
+                                item.name.includes('Leather') ||
+                                item.name.includes('T-Shirt') ||
+                                item.name.includes('Sweater') ||
+                                item.name.includes('Jeans') ||
+                                item.name.includes('Trousers') ||
+                                item.name.includes('Jacket')
+                            )
+                        );
+
+                        if (hasEnglishData) {
+                            needsResave = true;
+                        } else {
+                            state.wardrobe = data.wardrobe;
+                        }
+                    }
+                    state.savedOutfits = data.savedOutfits || [];
+                    state.location = data.location || null;
+                    state.locationName = data.locationName || '';
+                    state.vibe = data.vibe || 'casual';
+                    state.occasion = data.occasion || '';
+                    state.ageGroup = data.ageGroup || '';
+                    state.preferredStyle = data.preferredStyle || '';
+                    state.laundrySchedule = data.laundrySchedule || [];
+                    state.outfitHistory = data.outfitHistory || [];
+                    state.reminders = data.reminders || [];
+                    state.capsules = parseInt(data.capsules) || 20;
+                    state.laundryHistory = data.laundryHistory || [];
+
+                    document.getElementById('vibe-select').value = state.vibe;
+                    document.getElementById('occasion-input').value = state.occasion;
+                    if (document.getElementById('age-group')) {
+                        document.getElementById('age-group').value = state.ageGroup;
+                    }
+                    if (document.getElementById('preferred-style')) {
+                        document.getElementById('preferred-style').value = state.preferredStyle;
+                    }
+                }
+                // Если были английские данные, сохраняем русские дефолты
+                if (needsResave) {
+                    saveToStorage();
+                }
+            } catch (e) {
+                console.error('Ошибка загрузки данных:', e);
+            }
+        }
+
+        function saveToStorage() {
+            try {
+                // Всегда сохраняем capsules как число
+                const dataToSave = {
+                    ...state,
+                    capsules: parseInt(state.capsules) || 0
+                };
+                localStorage.setItem('wardrobeData', JSON.stringify(dataToSave));
+            } catch (e) {
+                console.error('Ошибка сохранения данных:', e);
+            }
+        }
+
+        function saveVibe() {
+            state.vibe = document.getElementById('vibe-select').value;
+            saveToStorage();
+        }
+
+        function saveOccasion() {
+            state.occasion = document.getElementById('occasion-input').value;
+            saveToStorage();
+        }
+
+        // Персонализация
+        function savePersonalization() {
+            state.ageGroup = document.getElementById('age-group').value;
+            state.preferredStyle = document.getElementById('preferred-style').value;
+            saveToStorage();
+        }
+
+        // Местоположение
+        function requestLocation() {
+            if (!navigator.geolocation) {
+                alert('Ваш браузер не поддерживает геолокацию');
+                return;
+            }
+
+            document.getElementById('location-display').innerHTML = '<p>Определяю местоположение...</p>';
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    state.location = {
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    };
+                    state.locationName = 'Ваше местоположение';
+                    fetchWeather(state.location);
+                    reverseGeocode(state.location);
+                    saveToStorage();
+                    updateLocationDisplay();
+                },
+                (error) => {
+                    console.error('Ошибка геолокации:', error);
+                    let errorMsg = 'Ошибка определения местоположения';
+
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = 'Доступ к геолокации запрещён';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = 'Местоположение недоступно';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = 'Превышено время ожидания';
+                            break;
+                    }
+
+                    document.getElementById('location-display').innerHTML = `
+                        <p style="color: #dc2626; margin-bottom: 8px;">${errorMsg}</p>
+                        <button class="btn-secondary" onclick="showLocationModal()">📍 Указать вручную</button>
+                    `;
+                },
+                options
+            );
+        }
+
+        async function reverseGeocode(loc) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${loc.lat}&lon=${loc.lon}&format=json`);
+                const data = await response.json();
+                state.locationName = data.address?.city || data.address?.town || data.address?.village || 'Ваше местоположение';
+                updateLocationDisplay();
+                saveToStorage();
+            } catch (e) {
+                console.error('Ошибка геокодирования:', e);
+            }
+        }
+
+        async function searchCity() {
+            const city = document.getElementById('city-search').value.trim();
+            if (!city) {
+                alert('Введите название города');
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = 'Поиск...';
+
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`);
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    state.location = {
+                        lat: parseFloat(data[0].lat),
+                        lon: parseFloat(data[0].lon)
+                    };
+                    state.locationName = data[0].display_name.split(',')[0];
+                    await fetchWeather(state.location);
+                    saveToStorage();
+                    updateLocationDisplay();
+                    hideLocationModal();
+                } else {
+                    alert('Город не найден. Попробуйте другое название.');
+                }
+            } catch (e) {
+                console.error('Ошибка поиска города:', e);
+                alert('Ошибка при поиске города. Проверьте подключение к интернету.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function updateLocationDisplay() {
+            document.getElementById('location-display').innerHTML = `
+                <div style="font-weight: bold; color: #065f46; margin-bottom: 4px;">${state.locationName}</div>
+                <div style="font-size: 14px; color: #065f46;">Местоположение установлено</div>
+            `;
+        }
+
+        // Погода
+        async function fetchWeather(loc) {
+            try {
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,precipitation,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=auto&forecast_days=14`);
+                const data = await response.json();
+                state.weather = data.current;
+                state.forecast = data.daily;
+                updateWeatherDisplay();
+            } catch (e) {
+                console.error('Ошибка получения погоды:', e);
+            }
+        }
+
+        function updateWeatherDisplay() {
+            if (!state.weather) return;
+
+            const temp = state.weather.temperature_2m;
+            const precip = state.weather.precipitation;
+            let emoji = '⛅';
+            if (precip > 0) emoji = '🌧️';
+            else if (temp < 10) emoji = '❄️';
+            else if (temp > 25) emoji = '☀️';
+
+            let forecastHTML = '';
+            if (state.forecast && state.forecast.time) {
+                forecastHTML = '<div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(30, 58, 138, 0.2);">';
+                for (let i = 0; i < 3; i++) {
+                    const date = new Date(state.forecast.time[i]);
+                    const dayName = i === 0 ? 'Сегодня' : date.toLocaleDateString('ru-RU', { weekday: 'short' });
+                    const maxTemp = state.forecast.temperature_2m_max[i];
+                    const minTemp = state.forecast.temperature_2m_min[i];
+                    const rain = state.forecast.precipitation_sum[i];
+                    forecastHTML += `
+                        <div style="font-size: 12px; color: #1e40af; margin-bottom: 4px;">
+                            ${dayName}: ${Math.round(minTemp)}-${Math.round(maxTemp)}°C ${rain > 0 ? '🌧️' : ''}
+                        </div>
+                    `;
+                }
+                forecastHTML += '</div>';
+            }
+
+            document.getElementById('weather-display').innerHTML = `
+                <div style="font-size: 24px; font-weight: bold; color: #1e3a8a; margin-bottom: 4px;">${emoji} ${temp}°C</div>
+                <div style="font-size: 14px; color: #1e40af;">Ветер: ${state.weather.wind_speed_10m} км/ч</div>
+                ${precip > 0 ? `<div style="font-size: 14px; color: #1e40af;">Дождь: ${precip}мм</div>` : ''}
+                ${forecastHTML}
+            `;
+        }
+
+        // Гардероб
+        function addItem() {
+            const name = document.getElementById('new-name').value;
+            const color = document.getElementById('new-color').value;
+
+            if (!name || !color) {
+                alert('Пожалуйста, укажите название и цвет вещи');
+                return;
+            }
+
+            const item = {
+                id: Date.now(),
+                type: document.getElementById('new-type').value,
+                name: name,
+                color: color,
+                warmth: parseInt(document.getElementById('new-warmth').value),
+                formality: parseInt(document.getElementById('new-formality').value),
+                waterproof: document.getElementById('new-waterproof').checked,
+                season: document.getElementById('new-season').value,
+                photo: currentPhoto || null
+            };
+
+            state.wardrobe.push(item);
+            saveToStorage();
+            renderWardrobe();
+            updateCounts();
+
+            // Сброс формы
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-color').value = '';
+            document.getElementById('new-warmth').value = 3;
+            document.getElementById('new-formality').value = 3;
+            document.getElementById('new-waterproof').checked = false;
+            document.getElementById('new-season').value = 'all';
+            document.getElementById('warmth-value').textContent = '3';
+            document.getElementById('formality-value').textContent = '3';
+            removePhoto();
+        }
+
+        // Функции работы с фото
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Проверка размера (макс 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Файл слишком большой! Максимум 5MB');
+                return;
+            }
+
+            // Проверка типа
+            if (!file.type.startsWith('image/')) {
+                alert('Пожалуйста, выберите изображение');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Компрессия изображения
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Ресайз если больше 800px
+                    const maxSize = 800;
+                    if (width > maxSize || height > maxSize) {
+                        if (width > height) {
+                            height = (height * maxSize) / width;
+                            width = maxSize;
+                        } else {
+                            width = (width * maxSize) / height;
+                            height = maxSize;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Конвертация в base64 (качество 0.8)
+                    currentPhoto = canvas.toDataURL('image/jpeg', 0.8);
+                    displayPhotoPreview(currentPhoto);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Сброс input
+            event.target.value = '';
+        }
+
+        function displayPhotoPreview(photoUrl) {
+            document.getElementById('photo-preview-img').src = photoUrl;
+            document.getElementById('photo-preview').style.display = 'block';
+            document.getElementById('photo-buttons').style.display = 'none';
+        }
+
+        function removePhoto() {
+            currentPhoto = null;
+            document.getElementById('photo-preview').style.display = 'none';
+            document.getElementById('photo-buttons').style.display = 'grid';
+            document.getElementById('photo-url').value = '';
+        }
+
+        function deleteItem(id) {
+            state.wardrobe = state.wardrobe.filter(item => item.id !== id);
+            saveToStorage();
+            renderWardrobe();
+            updateCounts();
+        }
+
+        function renderWardrobe() {
+            const container = document.getElementById('wardrobe-container');
+            if (state.wardrobe.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Пока нет вещей. Добавьте одежду в гардероб!</p>';
+                return;
+            }
+
+            container.innerHTML = state.wardrobe.map(item => {
+                const photoHtml = item.photo ? `
+                    <div style="margin-bottom: 12px;">
+                        <img src="${item.photo}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;" alt="${item.name}">
+                    </div>
+                ` : '';
+
+                const seasonEmoji = {
+                    'spring': '🌸',
+                    'summer': '☀️',
+                    'autumn': '🍂',
+                    'winter': '❄️',
+                    'all': '🔄'
+                }[item.season || 'all'];
+
+                const seasonText = {
+                    'spring': 'Весна',
+                    'summer': 'Лето',
+                    'autumn': 'Осень',
+                    'winter': 'Зима',
+                    'all': 'Всесезон'
+                }[item.season || 'all'];
+
+                const categoryName = {
+                    'top': 'ВЕРХ',
+                    'bottom': 'НИЗ',
+                    'outerwear': 'ВЕРХНЯЯ ОДЕЖДА',
+                    'shoes': 'ОБУВЬ',
+                    'accessory': 'АКСЕССУАР'
+                }[item.type] || 'ОДЕЖДА';
+
+                return `
+                    <div class="wardrobe-item">
+                        ${photoHtml ? photoHtml : `
+                        <div style="margin-bottom: 20px; text-align: center; padding: 48px 24px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%); border-radius: 16px; border: 2px dashed var(--border-color);">
+                            <div style="font-size: 15px; color: var(--text-primary); font-weight: 600; margin-bottom: 8px;">${categoryName}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">${item.name}</div>
+                        </div>
+                        `}
+                        <div class="flex justify-between items-center mb-3">
+                            <div style="font-size: 11px; font-weight: 700; color: var(--ocean-deep); text-transform: uppercase; letter-spacing: 0.5px;">${categoryName}</div>
+                            <button class="icon-btn" onclick="deleteItem(${item.id})" style="color: #dc2626; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">🗑️</button>
+                        </div>
+                        <h4 style="font-weight: 700; margin-bottom: 16px; color: var(--text-primary); font-size: 18px;">${item.name}</h4>
+                        <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.8;">
+                            <div style="margin-bottom: 12px; padding: 12px; background: var(--input-bg); border-radius: 10px;">
+                                <span style="font-weight: 600; color: var(--text-primary);">Цвет:</span> ${item.color}
+                            </div>
+                            <div class="flex gap-3 mb-3" style="flex-wrap: wrap;">
+                                <span style="padding: 8px 12px; background: var(--input-bg); border-radius: 8px; font-size: 13px; font-weight: 600;">🌡️ Теплота ${item.warmth}/5</span>
+                                <span style="padding: 8px 12px; background: var(--input-bg); border-radius: 8px; font-size: 13px; font-weight: 600;">👔 Формальность ${item.formality}/5</span>
+                                ${item.waterproof ? '<span style="padding: 8px 12px; background: var(--input-bg); border-radius: 8px; font-size: 13px; font-weight: 600;">☔ Водонепроницаемая</span>' : ''}
+                            </div>
+                            <div style="margin-top: 8px; display: inline-block; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); padding: 8px 16px; border-radius: 10px; font-size: 13px; color: white; font-weight: 700;">
+                                ${seasonEmoji} ${seasonText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Комбо-предложения
+        async function generateCombos() {
+            const container = document.getElementById('combos-container');
+
+            if (state.wardrobe.length < 3) {
+                container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 16px;">Добавьте хотя бы 3 вещи в гардероб</p>';
+                return;
+            }
+
+            container.innerHTML = '<div style="text-align: center; padding: 24px;"><div class="spinner" style="border-color: #8b5cf6; border-top-color: transparent;"></div></div>';
+
+            try {
+                const wardrobeDesc = state.wardrobe.map(item =>
+                    `${item.name} (${item.color}, ${item.type})`
+                ).join('; ');
+
+                const prompt = `Ты - профессиональный стилист. Проанализируй гардероб и предложи 5 удачных комбинаций вещей, которые хорошо сочетаются друг с другом.
+
+ГАРДЕРОБ:
+${wardrobeDesc}
+
+Подбери комбинации по принципам:
+- Сочетание цветов
+- Баланс стилей
+- Универсальность
+
+Ответь ТОЛЬКО в JSON формате - массив из 5 комбинаций:
+[
+  {
+    "items": ["вещь1", "вещь2", "вещь3"],
+    "reason": "почему эти вещи хорошо сочетаются (1 предложение)"
+  }
+]`;
+
+                const response = await fetch('https://api.llm7.io/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'gpt-5-mini',
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.8
+                    })
+                });
+
+                const data = await response.json();
+                let content = data.choices[0].message.content;
+                content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+                const combos = JSON.parse(content);
+
+                container.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        ${combos.map((combo, idx) => `
+                            <div style="background: var(--card-bg); padding: 16px; border-radius: 10px; transition: all 0.3s ease; border: 1px solid var(--border-color);">
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+                                    Комбо #${idx + 1}
+                                </div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+                                    ${combo.items.map(item => `
+                                        <span style="background: var(--tab-inactive-bg); padding: 6px 10px; border-radius: 6px; font-size: 13px; color: var(--text-primary);">
+                                            ${item}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary); font-style: italic;">
+                                    ${combo.reason}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+            } catch (e) {
+                console.error('Ошибка генерации комбо:', e);
+                container.innerHTML = '<p style="color: #dc2626; text-align: center;">Ошибка при подборе комбинаций</p>';
+            }
+        }
+
+        // Подбор образов
+        async function generateOutfits() {
+            if (state.wardrobe.length < 3) {
+                document.getElementById('generate-error').textContent = 'Добавьте хотя бы 3 вещи в гардероб!';
+                return;
+            }
+            if (!state.location) {
+                document.getElementById('generate-error').textContent = 'Сначала укажите местоположение!';
+                return;
+            }
+
+            document.getElementById('generate-error').textContent = '';
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Подбираю образы...';
+
+            try {
+                const weatherDesc = state.weather
+                    ? `Температура: ${state.weather.temperature_2m}°C, Ветер: ${state.weather.wind_speed_10m} км/ч, Осадки: ${state.weather.precipitation}мм`
+                    : 'Умеренная погода';
+
+                const wardrobeDesc = state.wardrobe.map(item =>
+                    `${item.name} (${item.type}, ${item.color}, теплота:${item.warmth}/5, формальность:${item.formality}/5${item.waterproof ? ', водонепроницаемая' : ''})`
+                ).join('; ');
+
+                const personalContext = state.ageGroup && state.preferredStyle ?
+                    `\nПЕРСОНАЛЬНЫЕ ПРЕДПОЧТЕНИЯ: Возраст ${state.ageGroup}, Стиль: ${state.preferredStyle}` : '';
+
+                const prompt = `Ты - профессиональный стилист. На основе следующей информации предложи 3 готовых образа из имеющегося гардероба.
+
+ПОГОДА: ${weatherDesc}
+НАСТРОЕНИЕ/СОБЫТИЕ: ${state.vibe}${state.occasion ? ` - ${state.occasion}` : ''}${personalContext}
+
+ДОСТУПНЫЙ ГАРДЕРОБ:
+${wardrobeDesc}
+
+Ответь ТОЛЬКО JSON-массивом из 3 образов. Каждый образ должен содержать:
+- "items": массив названий вещей из гардероба (обязательно: 1 верх, 1 низ, 1 обувь. Опционально: верхняя одежда, аксессуары)
+- "rationale": одно короткое предложение, почему этот образ работает
+
+Формат: [{"items": ["вещь1", "вещь2", ...], "rationale": "..."}, ...]`;
+
+                const response = await fetch('https://api.llm7.io/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'gpt-5-mini',
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.8
+                    })
+                });
+
+                const data = await response.json();
+                let content = data.choices[0].message.content;
+                content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+                const outfits = JSON.parse(content);
+                currentOutfits = outfits;
+                renderOutfits(outfits);
+                switchTab('results');
+            } catch (e) {
+                console.error('Ошибка генерации:', e);
+                const fallback = generateFallbackOutfits();
+                currentOutfits = fallback;
+                renderOutfits(fallback);
+                switchTab('results');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '✨ Подобрать образы';
+        }
+
+        function generateFallbackOutfits() {
+            const tops = state.wardrobe.filter(i => i.type === 'top');
+            const bottoms = state.wardrobe.filter(i => i.type === 'bottom');
+            const shoes = state.wardrobe.filter(i => i.type === 'shoes');
+            const outerwear = state.wardrobe.filter(i => i.type === 'outerwear');
+
+            const combos = [];
+            for (let i = 0; i < Math.min(3, tops.length); i++) {
+                const outfit = {
+                    items: [
+                        tops[i % tops.length]?.name,
+                        bottoms[i % bottoms.length]?.name,
+                        shoes[i % shoes.length]?.name
+                    ].filter(Boolean),
+                    rationale: 'Классическая комбинация для большинства случаев'
+                };
+                if (outerwear.length > 0 && state.weather?.temperature_2m < 15) {
+                    outfit.items.push(outerwear[0].name);
+                }
+                combos.push(outfit);
+            }
+            return combos;
+        }
+
+        // Свайпы
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let currentOutfitIndex = 0;
+
+        function handleSwipe(container) {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0 && currentOutfitIndex < currentOutfits.length - 1) {
+                    // Свайп влево - следующий
+                    currentOutfitIndex++;
+                    updateOutfitView();
+                } else if (diff < 0 && currentOutfitIndex > 0) {
+                    // Свайп вправо - предыдущий
+                    currentOutfitIndex--;
+                    updateOutfitView();
+                }
+            }
+        }
+
+        function updateOutfitView() {
+            const container = document.getElementById('outfits-container');
+            container.style.transform = `translateX(-${currentOutfitIndex * 100}%)`;
+
+            // Обновляем индикаторы
+            document.querySelectorAll('.outfit-indicator').forEach((dot, idx) => {
+                dot.style.opacity = idx === currentOutfitIndex ? '1' : '0.3';
+            });
+        }
+
+        function renderOutfits(outfits) {
+            const container = document.getElementById('outfits-container');
+            currentOutfitIndex = 0;
+
+            // Мобильная версия со свайпами
+            if (window.innerWidth < 768) {
+                const wrapper = document.createElement('div');
+                wrapper.style.overflow = 'hidden';
+                wrapper.style.position = 'relative';
+
+                wrapper.innerHTML = `
+                    <div id="outfits-container" style="display: flex; transition: transform 0.3s ease; width: 100%;">
+                        ${outfits.map((outfit, idx) => `
+                            <div class="outfit-card" style="min-width: 100%; flex-shrink: 0;">
+                                <div style="font-size: 24px; font-weight: bold; color: #7c3aed; margin-bottom: 12px;">
+                                    Образ ${idx + 1} из ${outfits.length}
+                                </div>
+                                <div style="margin-bottom: 16px;">
+                                    ${outfit.items.map(item => `<div class="outfit-item">${item}</div>`).join('')}
+                                </div>
+                                <div style="font-size: 14px; color: var(--text-primary); font-style: italic; padding: 12px; background: var(--card-bg); border-radius: 8px; margin-bottom: 16px; transition: all 0.3s ease;">
+                                    "${outfit.rationale}"
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
+                        ${outfits.map((_, idx) => `
+                            <div class="outfit-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6; opacity: ${idx === 0 ? '1' : '0.3'}; transition: opacity 0.3s;"></div>
+                        `).join('')}
+                    </div>
+                `;
+
+                container.parentElement.innerHTML = '';
+                container.parentElement.appendChild(wrapper);
+
+                const outfitsContainer = document.getElementById('outfits-container');
+                outfitsContainer.addEventListener('touchstart', e => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+
+                outfitsContainer.addEventListener('touchend', e => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe(outfitsContainer);
+                }, { passive: true });
+
+            } else {
+                // Десктопная версия - сетка
+                container.innerHTML = outfits.map((outfit, idx) => `
+                    <div class="outfit-card">
+                        <div style="font-size: 24px; font-weight: bold; color: #7c3aed; margin-bottom: 12px;">
+                            Образ #${idx + 1}
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            ${outfit.items.map(item => `<div class="outfit-item">${item}</div>`).join('')}
+                        </div>
+                        <div style="font-size: 14px; color: var(--text-primary); font-style: italic; padding: 12px; background: var(--card-bg); border-radius: 8px; margin-bottom: 16px; transition: all 0.3s ease;">
+                            "${outfit.rationale}"
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function saveOutfit(index) {
+            const outfit = currentOutfits[index];
+            const savedOutfit = {
+                ...outfit,
+                id: Date.now(),
+                savedAt: new Date().toISOString()
+            };
+
+            state.savedOutfits.push(savedOutfit);
+
+            // Добавляем в историю
+            state.outfitHistory.push({
+                id: Date.now(),
+                date: new Date().toISOString(),
+                outfit: outfit,
+                weather: state.weather ? {
+                    temp: state.weather.temperature_2m,
+                    precipitation: state.weather.precipitation,
+                    wind: state.weather.wind_speed_10m
+                } : null,
+                location: state.locationName
+            });
+
+            saveToStorage();
+            renderSavedOutfits();
+            updateCounts();
+            alert('Образ сохранён! ❤️');
+        }
+
+        let currentShareBlob = null;
+
+        async function shareOutfit(index) {
+            const outfit = currentOutfits[index];
+
+            // Создаём canvas для красивой картинки (высокое качество)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;  // Instagram Stories format
+            canvas.height = 1920;
+            const ctx = canvas.getContext('2d');
+
+            // Включаем сглаживание для лучшего качества
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // Градиентный фон
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#fff1f2');
+            gradient.addColorStop(0.3, '#fef3c7');
+            gradient.addColorStop(0.7, '#dbeafe');
+            gradient.addColorStop(1, '#fce7f3');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Декоративные элементы
+            ctx.globalAlpha = 0.08;
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.arc(150, 250, 450, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(930, 1600, 400, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#8b5cf6';
+            ctx.beginPath();
+            ctx.arc(540, 960, 300, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Главная карточка
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+            ctx.shadowBlur = 50;
+            ctx.shadowOffsetY = 25;
+            roundRect(ctx, 60, 180, 960, 1400, 48);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Заголовок
+            ctx.fillStyle = '#18181b';
+            ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Мой образ', 540, 340);
+
+            // Дата и погода
+            const today = new Date().toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            ctx.font = '38px -apple-system, sans-serif';
+            ctx.fillStyle = '#71717a';
+            ctx.fillText(today, 540, 410);
+
+            if (state.weather && state.locationName) {
+                ctx.fillText(`${Math.round(state.weather.temperature_2m)}°C • ${state.locationName}`, 540, 475);
+            } else if (state.weather) {
+                ctx.fillText(`${Math.round(state.weather.temperature_2m)}°C`, 540, 475);
+            }
+
+            // Разделитель
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.2)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(180, 540);
+            ctx.lineTo(900, 540);
+            ctx.stroke();
+
+            // Вещи
+            let yPos = 650;
+            ctx.textAlign = 'left';
+
+            outfit.items.forEach((item, idx) => {
+                // Фон для каждой вещи
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.06)';
+                roundRect(ctx, 120, yPos - 58, 840, 100, 24);
+                ctx.fill();
+
+                // Номер
+                ctx.fillStyle = '#f43f5e';
+                ctx.font = 'bold 44px -apple-system, sans-serif';
+                ctx.fillText(`${idx + 1}`, 160, yPos);
+
+                // Название вещи
+                ctx.fillStyle = '#18181b';
+                ctx.font = '42px -apple-system, sans-serif';
+
+                // Обрезаем длинный текст
+                let itemText = item;
+                const maxItemWidth = 720;
+                while (ctx.measureText(itemText).width > maxItemWidth && itemText.length > 0) {
+                    itemText = itemText.substring(0, itemText.length - 1);
+                }
+                if (itemText.length < item.length) itemText += '...';
+
+                ctx.fillText(itemText, 250, yPos);
+
+                yPos += 130;
+            });
+
+            // Обоснование (если есть место)
+            if (yPos < 1350) {
+                yPos += 30;
+                ctx.fillStyle = '#71717a';
+                ctx.font = 'italic 34px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                const maxWidth = 800;
+                const words = outfit.rationale.split(' ');
+                let line = '';
+                let lines = [];
+
+                for (let word of words) {
+                    const testLine = line + word + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > maxWidth && line !== '') {
+                        lines.push(line);
+                        line = word + ' ';
+                    } else {
+                        line = testLine;
+                    }
+                }
+                if (line) lines.push(line);
+
+                // Ограничиваем количество строк
+                lines = lines.slice(0, 4);
+                lines.forEach(line => {
+                    if (yPos < 1450) {
+                        ctx.fillText(line, 540, yPos);
+                        yPos += 52;
+                    }
+                });
+            }
+
+            // Брендинг внизу
+            ctx.fillStyle = '#18181b';
+            ctx.font = 'bold 52px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Умный гардероб', 540, 1680);
+
+            ctx.font = '36px -apple-system, sans-serif';
+            ctx.fillStyle = '#71717a';
+            ctx.fillText('Твой AI-стилист каждый день', 540, 1750);
+
+            // Конвертируем в blob и показываем модалку
+            canvas.toBlob((blob) => {
+                currentShareBlob = blob;
+                const url = URL.createObjectURL(blob);
+
+                // Показываем preview
+                document.getElementById('share-preview').src = url;
+                showShareModal();
+
+                // Навешиваем обработчик на кнопку
+                document.getElementById('share-download-btn').onclick = () => downloadImage(blob, url);
+            }, 'image/png', 1.0); // Максимальное качество
+        }
+
+        function showShareModal() {
+            document.getElementById('share-modal').classList.add('show');
+        }
+
+        function hideShareModal() {
+            document.getElementById('share-modal').classList.remove('show');
+            if (currentShareBlob) {
+                URL.revokeObjectURL(document.getElementById('share-preview').src);
+                currentShareBlob = null;
+            }
+        }
+
+        function downloadImage(blob, url) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `outfit-${Date.now()}.png`;
+            a.click();
+            hideShareModal();
+        }
+
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+
+            if (state.outfitHistory.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 48px; color: var(--text-secondary);">
+                        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">📊</div>
+                        <p>История пуста. Сохраняйте образы, чтобы видеть историю!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Сортируем по дате (новые сверху)
+            const sorted = [...state.outfitHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    ${sorted.map(entry => {
+                        const date = new Date(entry.date);
+                        const dateStr = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                        const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
+                        let weatherHTML = '';
+                        if (entry.weather) {
+                            const emoji = entry.weather.precipitation > 0 ? '🌧️' :
+                                         entry.weather.temp < 10 ? '❄️' :
+                                         entry.weather.temp > 25 ? '☀️' : '⛅';
+                            weatherHTML = `
+                                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary);">
+                                    <span style="font-size: 20px;">${emoji}</span>
+                                    <span>${entry.weather.temp}°C</span>
+                                    ${entry.weather.precipitation > 0 ? `<span>💧${entry.weather.precipitation}мм</span>` : ''}
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <div style="background: var(--card-bg); border-radius: 12px; padding: 20px; transition: all 0.3s ease; border: 1px solid var(--border-color);">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 16px; color: var(--text-primary); margin-bottom: 4px;">
+                                            ${dateStr}
+                                        </div>
+                                        <div style="font-size: 13px; color: var(--text-secondary);">
+                                            ${timeStr} • ${entry.location || 'Местоположение неизвестно'}
+                                        </div>
+                                    </div>
+                                    ${weatherHTML}
+                                </div>
+
+                                <div style="background: var(--tab-inactive-bg); padding: 16px; border-radius: 10px;">
+                                    <div style="font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Образ:</div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                        ${entry.outfit.items.map(item => `
+                                            <div style="background: var(--card-bg); padding: 8px 12px; border-radius: 6px; font-size: 14px; color: var(--text-primary);">
+                                                ${item}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    ${entry.outfit.rationale ? `
+                                        <div style="margin-top: 12px; font-size: 13px; color: var(--text-secondary); font-style: italic;">
+                                            "${entry.outfit.rationale}"
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function renderSavedOutfits() {
+            const container = document.getElementById('saved-container');
+            if (state.savedOutfits.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 48px 0; color: var(--text-secondary);">
+                        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">❤️</div>
+                        <p>Нет сохранённых образов. Подберите образы и сохраните понравившиеся!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `<div class="outfit-grid">${state.savedOutfits.map(outfit => `
+                <div style="background: linear-gradient(135deg, #fce7f3 0%, #faf5ff 100%); border-radius: 12px; padding: 24px; border: 2px solid #fbcfe8;">
+                    <div class="flex justify-between items-center mb-3">
+                        <span style="color: #ec4899; font-size: 20px;">❤️</span>
+                        <span style="font-size: 12px; color: var(--text-secondary);">${new Date(outfit.savedAt).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        ${outfit.items.map(item => `<div style="background: var(--card-bg); padding: 8px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: var(--text-primary); transition: all 0.3s ease;">${item}</div>`).join('')}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-primary); font-style: italic; padding: 8px; background: var(--card-bg); border-radius: 8px; transition: all 0.3s ease;">
+                        "${outfit.rationale}"
+                    </div>
+                </div>
+            `).join('')}</div>`;
+        }
+
+        // Календарь стирки
+        function renderLaundryCalendar() {
+            const container = document.getElementById('laundry-calendar');
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+
+            // Получаем первый день месяца и количество дней
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Понедельник = 0
+
+            const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+            let calendarHTML = `
+                <div style="margin-bottom: 16px; display: flex; justify-content: center; align-items: center; gap: 12px;">
+                    <h4 style="font-size: 18px; font-weight: 600; color: var(--text-primary);">${monthNames[currentMonth]} ${currentYear}</h4>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 8px;">
+                    ${dayNames.map(day => `
+                        <div style="text-align: center; font-weight: 600; font-size: 12px; color: var(--text-secondary); padding: 8px;">
+                            ${day}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+            `;
+
+            // Пустые ячейки до начала месяца
+            for (let i = 0; i < startDay; i++) {
+                calendarHTML += '<div></div>';
+            }
+
+            // Дни месяца
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(currentYear, currentMonth, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const isToday = day === today.getDate() && currentMonth === today.getMonth();
+                const isPast = date < today && !isToday;
+
+                // Проверяем есть ли запланированная стирка
+                const laundryItem = state.laundrySchedule.find(item => item.date === dateStr);
+
+                let bgColor = 'var(--card-bg)';
+                let textColor = 'var(--text-primary)';
+                let borderColor = 'var(--border-color)';
+                let emoji = '';
+
+                if (isToday) {
+                    borderColor = '#8b5cf6';
+                    bgColor = 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)';
+                }
+
+                if (laundryItem) {
+                    bgColor = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+                    emoji = '🧺';
+                    borderColor = '#3b82f6';
+                }
+
+                if (isPast) {
+                    textColor = 'var(--text-secondary)';
+                }
+
+                calendarHTML += `
+                    <div onclick="toggleLaundryDate('${dateStr}')"
+                         style="background: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 8px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="font-weight: ${isToday ? '700' : '500'}; color: ${textColor}; font-size: 14px;">
+                            ${day}
+                        </div>
+                        ${emoji ? `<div style="font-size: 18px; margin-top: 4px;">${emoji}</div>` : ''}
+                        ${laundryItem ? `<div style="font-size: 9px; color: #1e40af; margin-top: 2px; font-weight: 600;">${laundryItem.type || 'Стирка'}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            calendarHTML += '</div>';
+
+            // Легенда
+            calendarHTML += `
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border: 2px solid #8b5cf6; border-radius: 4px;"></div>
+                        <span style="color: var(--text-secondary);">Сегодня</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 20px; height: 20px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 2px solid #3b82f6; border-radius: 4px;"></div>
+                        <span style="color: var(--text-secondary);">Стирка 🧺</span>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = calendarHTML;
+        }
+
+        function toggleLaundryDate(dateStr) {
+            const index = state.laundrySchedule.findIndex(item => item.date === dateStr);
+
+            if (index >= 0) {
+                // Удаляем
+                state.laundrySchedule.splice(index, 1);
+            } else {
+                // Добавляем
+                const laundryType = prompt('Тип стирки (например: повседневная, спортивная, деловая):') || 'Стирка';
+
+                // Автоматически используем капсулу
+                if (state.capsules > 0) {
+                    state.capsules--;
+                    updateCapsulesDisplay();
+                } else {
+                    if (!confirm('Капсулы закончились! Добавить стирку всё равно?')) {
+                        return;
+                    }
+                }
+
+                state.laundrySchedule.push({
+                    date: dateStr,
+                    type: laundryType,
+                    createdAt: new Date().toISOString()
+                });
+
+                // Добавляем в историю стирок
+                addToLaundryHistory(dateStr, laundryType);
+                renderLaundryHistory();
+            }
+
+            saveToStorage();
+            renderLaundryCalendar();
+        }
+
+        // Планирование стирки
+        async function generateLaundryPlan() {
+            const targetDate = document.getElementById('target-date').value;
+            const laundryType = document.getElementById('laundry-type').value;
+
+            if (!targetDate) {
+                alert('Пожалуйста, укажите дату!');
+                return;
+            }
+
+            if (!state.forecast) {
+                alert('Сначала установите местоположение для получения прогноза погоды!');
+                return;
+            }
+
+            const container = document.getElementById('laundry-plan-container');
+            container.innerHTML = '<div style="text-align: center; padding: 24px;"><div class="spinner" style="border-color: #8b5cf6; border-top-color: transparent;"></div> Создаю план...</div>';
+
+            try {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const target = new Date(targetDate);
+                target.setHours(0, 0, 0, 0);
+                const daysUntil = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+
+                // Проверяем, что дата в пределах прогноза (14 дней)
+                if (daysUntil > 14) {
+                    container.innerHTML = '<div style="background: #fef2f2; color: #dc2626; padding: 16px; border-radius: 8px;">Выберите дату в пределах 14 дней для точного прогноза погоды.</div>';
+                    return;
+                }
+
+                if (daysUntil < 0) {
+                    container.innerHTML = '<div style="background: #fef2f2; color: #dc2626; padding: 16px; border-radius: 8px;">Выберите дату в будущем.</div>';
+                    return;
+                }
+
+                // Берем прогноз до целевой даты (или все 14 дней, если дата дальше)
+                const forecastDays = Math.min(daysUntil + 2, state.forecast.time.length);
+                const weatherInfo = state.forecast ?
+                    state.forecast.time.slice(0, forecastDays).map((d, i) => {
+                        const date = new Date(d);
+                        return `${date.toLocaleDateString('ru-RU', {day: 'numeric', month: 'short', weekday: 'short'})}: ${Math.round(state.forecast.temperature_2m_min[i])}-${Math.round(state.forecast.temperature_2m_max[i])}°C${state.forecast.precipitation_sum[i] > 0 ? ', дождь ' + state.forecast.precipitation_sum[i] + 'мм' : ', без осадков'}`;
+                    }).join('\n') : 'Прогноз недоступен';
+
+                const wardrobeInfo = state.wardrobe.map(item =>
+                    `${item.name} (${item.type}, тепло:${item.warmth}/5, формальность:${item.formality}/5${item.waterproof ? ', водостойкая' : ''})`
+                ).join('; ');
+
+                const personalInfo = `Возраст: ${state.ageGroup || 'не указан'}, Стиль: ${state.preferredStyle || 'не указан'}`;
+
+                const prompt = `Ты - умный ассистент по планированию стирки. Проанализируй следующую информацию и создай оптимальный план стирки.
+
+ПЕРСОНАЛЬНАЯ ИНФОРМАЦИЯ:
+${personalInfo}
+
+ПРОГНОЗ ПОГОДЫ (доступные даты):
+${weatherInfo}
+
+ГАРДЕРОБ:
+${wardrobeInfo}
+
+ЗАДАЧА:
+- Тип одежды для стирки: ${laundryType === 'all' ? 'вся' : laundryType === 'everyday' ? 'повседневная' : laundryType === 'workout' ? 'спортивная' : 'деловая'}
+- Одежда должна быть готова к: ${new Date(targetDate).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+- Дней до целевой даты: ${daysUntil}
+
+ВАЖНО:
+1. Выбери КОНКРЕТНЫЕ ДАТЫ из прогноза выше (например "4 янв., пт" или "15 дек., сб")
+2. Учитывай погоду - дни без дождя лучше для сушки
+3. Планируй стирку так, чтобы одежда точно высохла к целевой дате
+4. В ответе указывай ТОЧНУЮ ДАТУ из прогноза, а не просто "суббота"
+
+Ответь ТОЛЬКО в JSON формате:
+{
+  "washDays": [{"day": "точная дата из прогноза (например: 4 янв., пт)", "reason": "почему этот день"}],
+  "capsules": число_капсул,
+  "recommendations": ["совет1", "совет2", "совет3"],
+  "dryingTime": "оценка времени сушки"
+}`;
+
+                const response = await fetch('https://api.llm7.io/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'gpt-5-mini',
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                let content = data.choices[0].message.content;
+                content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+                const plan = JSON.parse(content);
+                state.currentLaundryPlan = { plan, targetDate, laundryType };
+
+                container.innerHTML = `
+                    <div style="background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s ease;">
+                        <h3 style="font-size: 20px; font-weight: bold; color: #8b5cf6; margin-bottom: 16px;">🤖 Ваш план стирки</h3>
+
+                        <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">Когда стирать:</div>
+                            ${plan.washDays.map(d => `
+                                <div style="margin-bottom: 8px; padding: 8px; background: var(--card-bg); border-radius: 6px; color: var(--text-primary); transition: all 0.3s ease;">
+                                    <strong>${d.day}</strong> - ${d.reason}
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 12px; border-radius: 8px;">
+                                <div style="font-weight: 600; color: var(--text-primary);">Капсулы</div>
+                                <div style="font-size: 24px; font-weight: bold; color: #1e40af;">${plan.capsules}</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 12px; border-radius: 8px;">
+                                <div style="font-weight: 600; color: var(--text-primary);">Время сушки</div>
+                                <div style="font-size: 16px; font-weight: bold; color: #065f46;">${plan.dryingTime}</div>
+                            </div>
+                        </div>
+
+                        <div style="background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">Рекомендации:</div>
+                            <ul style="margin-left: 20px; color: var(--text-primary);">
+                                ${plan.recommendations.map(r => `<li style="margin-bottom: 4px;">${r}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button onclick="acceptLaundryPlan()" class="btn-primary" style="flex: 1; max-width: 250px;">
+                                ✓ Принять план
+                            </button>
+                            <button onclick="declineLaundryPlan()" class="btn-secondary" style="flex: 1; max-width: 250px;">
+                                ✗ Отклонить
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+            } catch (e) {
+                console.error('Ошибка создания плана:', e);
+                container.innerHTML = `
+                    <div style="background: #fee2e2; color: #dc2626; padding: 16px; border-radius: 8px;">
+                        Ошибка при создании плана. Попробуйте еще раз.
+                    </div>
+                `;
+            }
+        }
+
+        function acceptLaundryPlan() {
+            if (!state.currentLaundryPlan) return;
+
+            const { plan, targetDate, laundryType } = state.currentLaundryPlan;
+
+            // Парсим даты из прогноза и добавляем в календарь
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            plan.washDays.forEach((washDay, index) => {
+                // Пытаемся распарсить дату из текста типа "4 янв., пт"
+                // Ищем ближайшую дату с таким же днем недели
+                const dayMatch = washDay.day.match(/(\d+)\s+(\S+)/);
+
+                if (dayMatch) {
+                    const day = parseInt(dayMatch[1]);
+                    const monthMap = {
+                        'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'май': 4, 'июн': 5,
+                        'июл': 6, 'авг': 7, 'сен': 8, 'окт': 9, 'ноя': 10, 'дек': 11
+                    };
+
+                    const monthAbbr = dayMatch[2].replace('.', '').toLowerCase().substring(0, 3);
+                    const month = monthMap[monthAbbr] ?? today.getMonth();
+
+                    const washDate = new Date(today.getFullYear(), month, day);
+                    // Если дата в прошлом, берем следующий год
+                    if (washDate < today) {
+                        washDate.setFullYear(today.getFullYear() + 1);
+                    }
+
+                    const dateStr = washDate.toISOString().split('T')[0];
+
+                    // Проверяем, нет ли уже записи на эту дату
+                    const existingIndex = state.laundrySchedule.findIndex(item => item.date === dateStr);
+                    if (existingIndex === -1) {
+                        state.laundrySchedule.push({
+                            date: dateStr,
+                            type: laundryType === 'everyday' ? 'Повседневная' :
+                                  laundryType === 'workout' ? 'Спортивная' :
+                                  laundryType === 'formal' ? 'Деловая' : 'Стирка',
+                            notes: washDay.reason,
+                            completed: false
+                        });
+                    }
+                } else {
+                    // Если не смогли распарсить - добавляем через N дней от сегодня
+                    const washDate = new Date(today);
+                    washDate.setDate(today.getDate() + index + 1);
+                    const dateStr = washDate.toISOString().split('T')[0];
+
+                    state.laundrySchedule.push({
+                        date: dateStr,
+                        type: laundryType === 'everyday' ? 'Повседневная' :
+                              laundryType === 'workout' ? 'Спортивная' :
+                              laundryType === 'formal' ? 'Деловая' : 'Стирка',
+                        notes: washDay.reason,
+                        completed: false
+                    });
+                }
+
+                // Добавляем в историю
+                state.laundryHistory.push({
+                    id: Date.now() + Math.random(),
+                    date: new Date().toISOString(),
+                    type: laundryType,
+                    scheduledFor: washDay.day,
+                    targetDate: targetDate,
+                    status: 'planned',
+                    notes: washDay.reason
+                });
+            });
+
+            // Уменьшаем количество капсул
+            const capsulesNeeded = parseInt(plan.capsules) || 0;
+            console.log('Капсулы до:', state.capsules, 'Нужно:', capsulesNeeded);
+
+            state.capsules = Math.max(0, parseInt(state.capsules) - capsulesNeeded);
+            console.log('Капсулы после:', state.capsules);
+
+            updateCapsulesDisplay();
+
+            saveToStorage();
+            renderLaundryHistory();
+            renderLaundryCalendar();
+
+            // Показываем временное сообщение
+            const container = document.getElementById('laundry-plan-container');
+            container.innerHTML = `
+                <div style="background: #d1fae5; color: #065f46; padding: 20px; border-radius: 12px; text-align: center; animation: slideIn 0.3s ease-out;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">✓</div>
+                    <div style="font-weight: 600; font-size: 18px;">План принят!</div>
+                    <div style="font-size: 14px; margin-top: 8px;">Стирки добавлены в календарь (${plan.washDays.length} ${plan.washDays.length === 1 ? 'день' : 'дня/дней'})</div>
+                </div>
+            `;
+
+            // Убираем сообщение через 5 секунд
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+
+            state.currentLaundryPlan = null;
+        }
+
+        function declineLaundryPlan() {
+            document.getElementById('laundry-plan-container').innerHTML = `
+                <div style="background: var(--tab-inactive-bg); color: var(--text-secondary); padding: 20px; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 18px;">План отклонен</div>
+                    <div style="font-size: 14px; margin-top: 8px;">Создайте новый план с другими параметрами</div>
+                </div>
+            `;
+            state.currentLaundryPlan = null;
+        }
+
+        // UI
+        // Рекомендации товаров
+        async function generateShoppingRecommendations() {
+            const category = document.getElementById('shop-category').value;
+            const container = document.getElementById('shop-container');
+
+            container.innerHTML = '<div style="text-align: center; padding: 48px;"><div class="spinner" style="border-color: #8b5cf6; border-top-color: transparent;"></div></div>';
+
+            try {
+                const wardrobeContext = state.wardrobe.map(item =>
+                    `${item.name} (${item.color}, ${item.type})`
+                ).join(', ');
+
+                const styleContext = state.preferredStyle ?
+                    `Предпочитаемый стиль: ${state.preferredStyle === 'oversized' ? 'мягкий oversized' : state.preferredStyle === 'business' ? 'строгий business casual' : state.preferredStyle === 'sport' ? 'спортивный' : 'смешанный'}` : '';
+
+                const ageContext = state.ageGroup ? `Возраст: ${state.ageGroup}` : '';
+
+                const categoryText = category === 'all' ? 'любые категории' :
+                    category === 'top' ? 'верх (футболки, свитера, рубашки)' :
+                    category === 'bottom' ? 'низ (брюки, юбки, шорты)' :
+                    category === 'outerwear' ? 'верхняя одежда (куртки, пальто)' :
+                    category === 'shoes' ? 'обувь' : 'аксессуары';
+
+                const prompt = `Ты - профессиональный шоппинг-ассистент. На основе гардероба пользователя подбери 6 товаров с российских маркетплейсов (Wildberries, Ozon, Lamoda).
+
+ТЕКУЩИЙ ГАРДЕРОБ:
+${wardrobeContext || 'Базовый гардероб'}
+
+ПЕРСОНАЛЬНАЯ ИНФОРМАЦИЯ:
+${ageContext}
+${styleContext}
+
+ЗАДАЧА:
+- Категория: ${categoryText}
+- Подбери вещи, которые дополнят существующий гардероб
+- Учитывай стиль и возраст пользователя
+- Подбери разнообразные варианты от разных брендов и стилей
+
+Ответь ТОЛЬКО в JSON формате - массив из 6 товаров:
+[
+  {
+    "name": "название товара",
+    "category": "категория",
+    "marketplace": "Wildberries/Ozon/Lamoda",
+    "searchQuery": "точный поисковый запрос для маркетплейса",
+    "description": "короткое описание (1 предложение)",
+    "whyGood": "почему подходит к гардеробу (1 предложение)"
+  }
+]`;
+
+                const response = await fetch('https://api.llm7.io/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'gpt-5-mini',
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.8
+                    })
+                });
+
+                const data = await response.json();
+                let content = data.choices[0].message.content;
+                content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+                const products = JSON.parse(content);
+                renderShoppingRecommendations(products);
+
+            } catch (e) {
+                console.error('Ошибка подбора товаров:', e);
+                container.innerHTML = `
+                    <div style="background: #fee2e2; color: #dc2626; padding: 16px; border-radius: 8px;">
+                        Ошибка при подборе товаров. Попробуйте еще раз.
+                    </div>
+                `;
+            }
+        }
+
+        function renderShoppingRecommendations(products) {
+            const container = document.getElementById('shop-container');
+
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    ${products.map(product => {
+                        const marketplaceUrl =
+                            product.marketplace === 'Wildberries' ? `https://www.wildberries.ru/catalog/0/search.aspx?search=${encodeURIComponent(product.searchQuery)}` :
+                            product.marketplace === 'Ozon' ? `https://www.ozon.ru/search/?text=${encodeURIComponent(product.searchQuery)}` :
+                            `https://www.lamoda.ru/catalogsearch/result/?q=${encodeURIComponent(product.searchQuery)}`;
+
+                        const marketplaceColor =
+                            product.marketplace === 'Wildberries' ? '#CB11AB' :
+                            product.marketplace === 'Ozon' ? '#005BFF' :
+                            '#7000FF';
+
+                        return `
+                            <div style="background: var(--card-bg); border-radius: 16px; padding: 24px; transition: all 0.3s ease; border: 1px solid var(--border-color); animation: slideIn 0.3s ease-out;">
+                                <h4 style="font-weight: 600; font-size: 17px; color: var(--text-primary); margin: 0 0 16px 0;">
+                                    ${product.name}
+                                </h4>
+
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">
+                                    ${product.description}
+                                </p>
+
+                                <div style="background: var(--tab-inactive-bg); padding: 14px; border-radius: 10px; margin-bottom: 18px;">
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+                                        ${product.whyGood}
+                                    </p>
+                                </div>
+
+                                <a href="${marketplaceUrl}" target="_blank" rel="noopener noreferrer"
+                                   style="display: flex; align-items: center; justify-content: center; gap: 8px; background: ${marketplaceColor}; color: white; padding: 14px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px; transition: all 0.2s;">
+                                    <span>Найти на ${product.marketplace}</span>
+                                    <span style="font-size: 18px;">→</span>
+                                </a>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+            if (tab === 'suggest') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('tab-suggest').classList.remove('hidden');
+            } else if (tab === 'wardrobe') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('tab-wardrobe').classList.remove('hidden');
+            } else if (tab === 'laundry') {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('tab-laundry').classList.remove('hidden');
+                renderLaundryCalendar();
+                renderLaundryHistory();
+            } else if (tab === 'shop') {
+                document.querySelectorAll('.tab')[3].classList.add('active');
+                document.getElementById('tab-shop').classList.remove('hidden');
+            } else if (tab === 'results') {
+                document.getElementById('tab-results').classList.remove('hidden');
+            }
+        }
+
+        // Статистика
+        function renderStats() {
+            const container = document.getElementById('stats-container');
+
+            if (state.outfitHistory.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 48px; color: var(--text-secondary);">
+                        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;">📈</div>
+                        <p>Нет данных для статистики. Сохраняйте образы!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Подсчет использования вещей
+            const itemUsage = {};
+            state.outfitHistory.forEach(entry => {
+                entry.outfit.items.forEach(item => {
+                    itemUsage[item] = (itemUsage[item] || 0) + 1;
+                });
+            });
+
+            // Сортируем по частоте использования
+            const sorted = Object.entries(itemUsage).sort((a, b) => b[1] - a[1]);
+            const total = state.outfitHistory.length;
+
+            container.innerHTML = `
+                <!-- Общая статистика -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px;">
+                    <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; font-weight: bold; color: #1e40af;">${total}</div>
+                        <div style="font-size: 14px; color: #1e40af; margin-top: 4px;">Всего образов</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; font-weight: bold; color: #065f46;">${sorted.length}</div>
+                        <div style="font-size: 14px; color: #065f46; margin-top: 4px;">Уникальных вещей</div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); padding: 20px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 32px; font-weight: bold; color: #9f1239;">${sorted[0] ? sorted[0][1] : 0}</div>
+                        <div style="font-size: 14px; color: #9f1239; margin-top: 4px;">Макс. использований</div>
+                    </div>
+                </div>
+
+                <!-- Топ вещей -->
+                <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 16px; color: var(--text-primary);">Топ вещей</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${sorted.slice(0, 10).map(([ item, count], idx) => {
+                        const percentage = Math.round((count / total) * 100);
+                        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+
+                        return `
+                            <div style="background: var(--card-bg); border-radius: 10px; padding: 16px; transition: all 0.3s ease; border: 1px solid var(--border-color);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                        <span style="font-size: 24px;">${medal}</span>
+                                        <span style="font-weight: 600; color: var(--text-primary);">${item}</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; font-size: 18px; color: var(--text-primary);">${count}</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">${percentage}%</div>
+                                    </div>
+                                </div>
+                                <div style="background: var(--tab-inactive-bg); border-radius: 4px; height: 8px; overflow: hidden;">
+                                    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%); height: 100%; width: ${percentage}%; transition: width 0.3s ease;"></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <!-- Редко используемые вещи -->
+                ${sorted.filter(([_, count]) => count === 1).length > 0 ? `
+                    <h3 style="font-size: 20px; font-weight: bold; margin: 32px 0 16px; color: var(--text-primary);">Редко используемые вещи</h3>
+                    <div style="background: var(--tab-inactive-bg); padding: 16px; border-radius: 10px;">
+                        <p style="color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">Эти вещи использованы только 1 раз:</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${sorted.filter(([_, count]) => count === 1).map(([item]) => `
+                                <span style="background: var(--card-bg); padding: 8px 12px; border-radius: 6px; font-size: 14px; color: var(--text-primary);">
+                                    ${item}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function showLocationModal() {
+            document.getElementById('location-modal').classList.add('show');
+        }
+
+        function hideLocationModal() {
+            document.getElementById('location-modal').classList.remove('show');
+        }
+
+        // Напоминания
+        function showRemindersModal() {
+            document.getElementById('reminders-modal').classList.add('show');
+            renderRemindersList();
+            checkReminders();
+        }
+
+        function hideRemindersModal() {
+            document.getElementById('reminders-modal').classList.remove('show');
+        }
+
+        function addReminder() {
+            const type = document.getElementById('reminder-type').value;
+            const text = document.getElementById('reminder-text').value;
+            const datetime = document.getElementById('reminder-datetime').value;
+
+            if (!text || !datetime) {
+                alert('Заполните все поля!');
+                return;
+            }
+
+            const reminder = {
+                id: Date.now(),
+                type: type,
+                text: text,
+                datetime: new Date(datetime).toISOString(),
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+
+            state.reminders.push(reminder);
+            saveToStorage();
+            renderRemindersList();
+
+            // Очищаем форму
+            document.getElementById('reminder-text').value = '';
+            document.getElementById('reminder-datetime').value = '';
+
+            // Устанавливаем проверку напоминаний
+            scheduleReminderCheck();
+        }
+
+        function renderRemindersList() {
+            const container = document.getElementById('reminders-list');
+            const activeReminders = state.reminders.filter(r => !r.completed);
+
+            if (activeReminders.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 24px; color: var(--text-secondary);">
+                        Нет активных напоминаний
+                    </div>
+                `;
+                return;
+            }
+
+            // Сортируем по дате
+            const sorted = activeReminders.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+            container.innerHTML = sorted.map(reminder => {
+                const date = new Date(reminder.datetime);
+                const dateStr = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                const isPast = date < new Date();
+
+                const typeEmoji = {
+                    'laundry': '🧺',
+                    'event': '📅',
+                    'shopping': '🛍️',
+                    'other': '📌'
+                }[reminder.type];
+
+                return `
+                    <div style="background: var(--tab-inactive-bg); padding: 12px; border-radius: 8px; margin-bottom: 8px; ${isPast ? 'opacity: 0.6;' : ''}">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                    <span style="font-size: 18px;">${typeEmoji}</span>
+                                    <span style="font-weight: 600; color: var(--text-primary);">${reminder.text}</span>
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">
+                                    ${dateStr} в ${timeStr} ${isPast ? '(просрочено)' : ''}
+                                </div>
+                            </div>
+                            <button onclick="deleteReminder(${reminder.id})" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px;">
+                                ✖️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Обновляем badge
+            updateRemindersBadge();
+        }
+
+        function deleteReminder(id) {
+            state.reminders = state.reminders.filter(r => r.id !== id);
+            saveToStorage();
+            renderRemindersList();
+        }
+
+        function checkReminders() {
+            const now = new Date();
+            const activeReminders = state.reminders.filter(r => !r.completed);
+
+            activeReminders.forEach(reminder => {
+                const reminderDate = new Date(reminder.datetime);
+                const diff = reminderDate - now;
+
+                // Если осталось меньше 1 минуты - показываем уведомление
+                if (diff > 0 && diff < 60000) {
+                    showReminderNotification(reminder);
+                    reminder.completed = true;
+                    saveToStorage();
+                }
+            });
+        }
+
+        function showReminderNotification(reminder) {
+            const typeEmoji = {
+                'laundry': '🧺',
+                'event': '📅',
+                'shopping': '🛍️',
+                'other': '📌'
+            }[reminder.type];
+
+            alert(`${typeEmoji} Напоминание!\n\n${reminder.text}`);
+
+            // Если браузер поддерживает Notification API
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Умный гардероб', {
+                    body: reminder.text,
+                    icon: '✨'
+                });
+            }
+        }
+
+        function scheduleReminderCheck() {
+            setInterval(checkReminders, 30000); // Проверяем каждые 30 секунд
+        }
+
+        function updateRemindersBadge() {
+            const activeCount = state.reminders.filter(r => !r.completed && new Date(r.datetime) > new Date()).length;
+            const btn = document.getElementById('reminders-btn');
+
+            if (activeCount > 0) {
+                btn.innerHTML = `🔔<span style="position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px;">${activeCount}</span>`;
+                btn.style.position = 'relative';
+            } else {
+                btn.innerHTML = '🔔';
+            }
+        }
+
+        // Управление капсулами
+        function updateCapsulesDisplay() {
+            const count = parseInt(state.capsules) || 0;
+            document.getElementById('capsules-count').textContent = count;
+
+            // Оценка на сколько дней хватит (примерно 3 стирки в неделю = 1 капсула каждые ~2 дня)
+            const estimatedDays = Math.floor(count * 2.3);
+            document.getElementById('capsules-days').textContent = count > 0 ? `~${estimatedDays} дней` : '0 дней';
+
+            // Предупреждение
+            const alert = document.getElementById('capsules-alert');
+
+            if (count === 0) {
+                alert.style.display = 'block';
+                alert.innerHTML = 'Капсулы закончились! Необходимо пополнить запас.';
+            } else if (count < 5) {
+                alert.style.display = 'block';
+                alert.innerHTML = 'Капсулы заканчиваются! Осталось менее 5 штук.';
+            } else {
+                alert.style.display = 'none';
+            }
+        }
+
+        function addCapsules() {
+            const amount = prompt('Сколько капсул добавить?', '10');
+            if (amount && !isNaN(amount)) {
+                const currentCapsules = parseInt(state.capsules) || 0;
+                const addAmount = parseInt(amount) || 0;
+                state.capsules = currentCapsules + addAmount;
+
+                console.log('Добавляем капсулы:', currentCapsules, '+', addAmount, '=', state.capsules);
+
+                updateCapsulesDisplay();
+                saveToStorage();
+            }
+        }
+
+
+        // История стирок
+        function addToLaundryHistory(date, type) {
+            state.laundryHistory.push({
+                id: Date.now(),
+                date: date,
+                type: type,
+                timestamp: new Date().toISOString()
+            });
+            saveToStorage();
+        }
+
+        function renderLaundryHistory() {
+            const container = document.getElementById('laundry-history-container');
+
+            if (state.laundryHistory.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">История стирок пуста</p>';
+                return;
+            }
+
+            // Сортируем по дате (новые сверху)
+            const sorted = [...state.laundryHistory].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${sorted.map(item => {
+                        // Маппинг типов стирки
+                        const typeMap = {
+                            'everyday': 'Повседневная',
+                            'workout': 'Спортивная',
+                            'formal': 'Деловая',
+                            'all': 'Вся одежда'
+                        };
+                        const displayType = typeMap[item.type] || item.type;
+
+                        // Форматируем дату (если есть scheduledFor, используем его)
+                        const scheduledText = item.scheduledFor || 'Дата не указана';
+
+                        // Форматируем время добавления
+                        const timestamp = new Date(item.timestamp || item.date);
+                        const isValidDate = !isNaN(timestamp.getTime());
+                        const formattedTime = isValidDate
+                            ? timestamp.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                            : 'Недавно';
+
+                        return `
+                            <div style="background: var(--tab-inactive-bg); padding: 16px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; animation: slideIn 0.3s ease-out;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
+                                        🧺 ${displayType}
+                                    </div>
+                                    <div style="font-size: 13px; color: var(--text-secondary);">
+                                        Запланировано: ${scheduledText}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                                        Добавлено: ${formattedTime}
+                                    </div>
+                                </div>
+                                <button onclick="deleteLaundryHistoryItem(${item.id})" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                                    🗑️
+                                </button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <div style="margin-top: 20px; padding: 16px; background: var(--tab-inactive-bg); border-radius: 10px; text-align: center;">
+                    <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;">Всего стирок в истории</div>
+                    <div style="font-size: 32px; font-weight: 700; color: #8b5cf6;">${state.laundryHistory.length}</div>
+                </div>
+            `;
+        }
+
+        function deleteLaundryHistoryItem(id) {
+            if (confirm('Удалить эту запись из истории?')) {
+                state.laundryHistory = state.laundryHistory.filter(item => item.id !== id);
+                saveToStorage();
+                renderLaundryHistory();
+            }
+        }
+
+        function updateCounts() {
+            document.getElementById('wardrobe-count').textContent = state.wardrobe.length;
+            document.getElementById('saved-count').textContent = state.savedOutfits.length;
+        }
+
+        // Импорт/Экспорт
+        function exportWardrobe() {
+            const data = JSON.stringify({ wardrobe: state.wardrobe, savedOutfits: state.savedOutfits }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'мой-гардероб.json';
+            a.click();
+        }
+
+        function importWardrobe(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.wardrobe) state.wardrobe = data.wardrobe;
+                        if (data.savedOutfits) state.savedOutfits = data.savedOutfits;
+                        saveToStorage();
+                        renderWardrobe();
+                        renderSavedOutfits();
+                        updateCounts();
+                        alert('Гардероб импортирован!');
+                    } catch (err) {
+                        alert('Ошибка при импорте файла');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // Инициализация при загрузке
+        init();
+
+        // Регистрация Service Worker для PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker зарегистрирован:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('❌ Ошибка регистрации Service Worker:', error);
+                    });
+            });
+        }
+
+        // Обработка установки PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('💡 PWA готово к установке!');
+
+            // Можно показать кнопку "Установить приложение"
+            // Или автоматически показать промпт через некоторое время
+            setTimeout(() => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('✅ Пользователь установил приложение');
+                        } else {
+                            console.log('❌ Пользователь отклонил установку');
+                        }
+                        deferredPrompt = null;
+                    });
+                }
+            }, 3000); // Показываем предложение установить через 3 секунды
+        });
+
+        // Отслеживание успешной установки
+        window.addEventListener('appinstalled', () => {
+            console.log('🎉 PWA успешно установлено!');
+            deferredPrompt = null;
+        });
+    </script>
+</body>
+</html>
