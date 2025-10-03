@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Пасхалка</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    h1 {
+      font-size: 48px;
+      color: #00ff88;
+      margin-bottom: 20px;
+      text-shadow: 0 0 10px #00ff88;
+    }
+    p {
+      font-size: 20px;
+      opacity: 0.9;
+    }
+    .egg {
+      margin-top: 40px;
+      width: 80px;
+      height: 110px;
+      background: radial-gradient(circle at 30% 30%, #ff99cc, #cc33ff);
+      border-radius: 50% 50% 45% 55% / 55% 45% 55% 45%;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: transform 0.3s ease;
+    }
+    .egg:hover {
+      transform: scale(1.2) rotate(10deg);
+    }
+    .secret {
+      margin-top: 20px;
+      font-size: 22px;
+      color: #ffcc00;
+      display: none;
+    }
+    @keyframes glow {
+      0% { box-shadow: 0 0 15px #00ff88; }
+      50% { box-shadow: 0 0 40px #ff00ff; }
+      100% { box-shadow: 0 0 15px #00ff88; }
+    }
+    .active {
+      animation: glow 1.5s infinite alternate;
+    }
+  </style>
+</head>
+<body>
+  <h1>Пасхалка 🎉</h1>
+  <p>Этот случайный файл оставлен намеренно. Теперь он стал секретом для тех, кто нашёл.</p>
+  <div class="egg" id="egg"></div>
+  <div class="secret" id="secret">✨ Секрет разблокирован! Спасибо, что заметил 🐣</div>
+
+  <script>
+    const egg = document.getElementById("egg");
+    const secret = document.getElementById("secret");
+
+    egg.addEventListener("click", () => {
+      egg.classList.toggle("active");
+      secret.style.display = secret.style.display === "block" ? "none" : "block";
+    });
+
+    // Дополнительный код: Konami Code
+    const sequence = [38,38,40,40,37,39,37,39,66,65];
+    let entered = [];
+
+    document.addEventListener("keydown", (e) => {
+      entered.push(e.keyCode);
+      if (entered.toString().indexOf(sequence) >= 0) {
+        secret.innerText = "🕹 Консольный код активирован! Ты легенда.";
+        secret.style.display = "block";
+        egg.classList.add("active");
+        entered = [];
+      }
+      if (entered.length > sequence.length) entered.shift();
+    });
+  </script>
+</body>
+</html>
